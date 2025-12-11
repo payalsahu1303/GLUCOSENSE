@@ -1,39 +1,40 @@
 // src/services/auth.js
-
 import {
   auth,
   googleProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   db,
   doc,
   setDoc,
   getDoc,
-} from "./firebase"; // Import necessary Firebase services
+} from "./firebase";
 
-// Function to sign in with Google
+// Trigger Google Sign-In (Redirect)
 export const signInWithGoogle = async () => {
   try {
-    // Trigger Google Sign-In popup
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
+    await signInWithRedirect(auth, googleProvider);
 
-    // Reference to the user's document in Firestore
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
+    // Handle the result after redirect
+    const result = await getRedirectResult(auth);
+    if (result) {
+      const user = result.user;
 
-    // If the user doesn't exist in Firestore, add them
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        uid: user.uid,
-        name: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        createdAt: new Date(),
-      });
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          createdAt: new Date(),
+        });
+      }
+
+      return user;
     }
-
-    // Return the user object after successful login
-    return user;
   } catch (error) {
     console.error("Google Sign-In Error:", error);
     throw error;
